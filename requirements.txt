@@ -1,0 +1,15 @@
+# Machine Learning & Deep Learning (Must be 2.15+ for CUDA 12.x support)
+tensorflow[and-cuda]>=2.15.0
+
+# Image processing and array math
+# Pinned below 2.0.0 to prevent compatibility errors with TensorFlow
+numpy>=1.23.5,<2.0.0
+
+# Computer Vision (for the webcam script)
+opencv-python>=4.8.0
+
+# Plotting and visualization (if you expand the project)
+matplotlib>=3.7.0
+
+# Utilities
+six>=1.16.0
