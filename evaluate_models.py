@@ -8,14 +8,14 @@ from sklearn.metrics import confusion_matrix
 # Disable annoying TF logs
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
-# GPU Memory Fix for RTX 3050
-gpus = tf.config.experimental.list_physical_devices('GPU')
-if gpus:
-    try:
-        for gpu in gpus:
-            tf.config.experimental.set_memory_growth(gpu, True)
-    except RuntimeError as e:
-        print(e)
+# # GPU Memory Fix for RTX 3050
+# gpus = tf.config.experimental.list_physical_devices('GPU')
+# if gpus:
+#     try:
+#         for gpu in gpus:
+#             tf.config.experimental.set_memory_growth(gpu, True)
+#     except RuntimeError as e:
+#         print(e)
 
 # --- Configuration ---
 IMG_SIZE = (224, 224)

@@ -5,14 +5,14 @@ from tensorflow.keras.applications import VGG16
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
-# GPU Memory Fix for RTX 3050
-gpus = tf.config.experimental.list_physical_devices('GPU')
-if gpus:
-    try:
-        for gpu in gpus:
-            tf.config.experimental.set_memory_growth(gpu, True)
-    except RuntimeError as e:
-        print(e)
+# # GPU Memory Fix for RTX 3050
+# gpus = tf.config.experimental.list_physical_devices('GPU')
+# if gpus:
+#     try:
+#         for gpu in gpus:
+#             tf.config.experimental.set_memory_growth(gpu, True)
+#     except RuntimeError as e:
+#         print(e)
 
 print("\n--- Training VGG16 (Classic Baseline) ---")
 
@@ -62,8 +62,8 @@ model.fit(
     callbacks=[early_stopping]    # Pass the callback here
 )
 
-model.save("vgg_model.keras")
-print("\nSaved as 'vgg_model.keras'")
+# model.save("vgg_model.keras")
+# print("\nSaved as 'vgg_model.keras'")
 
 # --- NEW: Create a 'models' folder if it doesn't exist ---
 os.makedirs('models', exist_ok=True)

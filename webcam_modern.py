@@ -5,23 +5,30 @@ import numpy as np
 import cv2
 import time
 import tensorflow as tf
+from tensorflow import python
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
-gpus = tf.config.experimental.list_physical_devices('GPU')
-if gpus:
-    try:
-        for gpu in gpus:
-            tf.config.experimental.set_memory_growth(gpu, True)
-    except RuntimeError as e:
-        print(e)
+# gpus = tf.config.experimental.list_physical_devices('GPU')
+# if gpus:
+#     try:
+#         for gpu in gpus:
+#             tf.config.experimental.set_memory_growth(gpu, True)
+#     except RuntimeError as e:
+#         print(e)
 
 def main():
     parser = argparse.ArgumentParser(description="Run the real-time sign language recognizer.")
     parser.add_argument('--model', type=str, default='mobilenet', choices=['mobilenet', 'resnet', 'efficientnet', 'vgg'], help='Which AI brain to use')
     args = parser.parse_args()
 
-    model_filename = os.path.join("models", f"{args.model}_model.keras")
+    # ---------------------------------------------------------
+    # --- UPDATED: Handle .h5 specifically for EfficientNet ---
+    if args.model == 'efficientnet':
+        model_filename = os.path.join("models", f"{args.model}_model.h5")
+    else:
+        model_filename = os.path.join("models", f"{args.model}_model.keras")
+    # ---------------------------------------------------------
 
     if not os.path.exists(model_filename):
         print(f"Error: Could not find '{model_filename}'. Train it first!")
@@ -131,3 +138,15 @@ def main():
 
 if __name__ == '__main__':
     main()
+
+
+
+# To run the recognizer with different models, use the following commands in your terminal:
+
+# MobileNet: python webcam_modern.py --model mobilenet
+
+# ResNet: python webcam_modern.py --model resnet
+
+# EfficientNet: python webcam_modern.py --model efficientnet
+
+# VGG: python webcam_modern.py --model vgg

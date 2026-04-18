@@ -5,14 +5,14 @@ from tensorflow.keras.applications import MobileNetV2
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
-# GPU Memory Fix for RTX 3050
-gpus = tf.config.experimental.list_physical_devices('GPU')
-if gpus:
-    try:
-        for gpu in gpus:
-            tf.config.experimental.set_memory_growth(gpu, True)
-    except RuntimeError as e:
-        print(e)
+# # GPU Memory Fix for RTX 3050
+# gpus = tf.config.experimental.list_physical_devices('GPU')
+# if gpus:
+#     try:
+#         for gpu in gpus:
+#             tf.config.experimental.set_memory_growth(gpu, True)
+#     except RuntimeError as e:
+#         print(e)
 
 print("\n--- Training MobileNetV2 (High Speed / Real-Time) ---")
 
@@ -63,3 +63,11 @@ model.fit(
 
 model.save("mobilenet_model.keras")
 print("\nSaved as 'mobilenet_model.keras'")
+
+# --- NEW: Create a 'models' folder if it doesn't exist ---
+os.makedirs('models', exist_ok=True)
+
+# Save the finalized model inside the models folder
+save_path = os.path.join('models', 'mobilenet_model.keras')
+model.save(save_path)
+print(f"\nSaved as '{save_path}'")

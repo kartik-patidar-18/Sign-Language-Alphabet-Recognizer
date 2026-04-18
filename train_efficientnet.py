@@ -5,15 +5,6 @@ from tensorflow.keras.applications import EfficientNetB0
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
-# GPU Memory Fix for RTX 3050
-gpus = tf.config.experimental.list_physical_devices('GPU')
-if gpus:
-    try:
-        for gpu in gpus:
-            tf.config.experimental.set_memory_growth(gpu, True)
-    except RuntimeError as e:
-        print(e)
-
 print("\n--- Training EfficientNetB0 (State of the Art Accuracy) ---")
 
 IMG_SIZE = (224, 224)
@@ -27,6 +18,8 @@ val_dataset = tf.keras.utils.image_dataset_from_directory(
     DATASET_DIR, validation_split=0.2, subset="validation", seed=123, image_size=IMG_SIZE, batch_size=BATCH_SIZE)
 
 class_names = train_dataset.class_names
+
+# Save labels in the main directory
 with open('modern_labels.txt', 'w') as f:
     f.write('\n'.join(class_names))
 
@@ -44,7 +37,7 @@ model = models.Sequential([
 
 model.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
 
-# --- EARLY STOPPING ADDED HERE ---
+# Early Stopping
 early_stopping = tf.keras.callbacks.EarlyStopping(
     monitor='val_accuracy',       # Stop based on validation accuracy
     patience=5,                   # Stop if no improvement for 5 epochs
@@ -52,22 +45,19 @@ early_stopping = tf.keras.callbacks.EarlyStopping(
     verbose=1                     # Print a message when early stopping triggers
 )
 
-# Train and Save
-# (Increased epochs to 50 so Early Stopping has a chance to work)
+# Train the Model
 model.fit(
     train_dataset, 
     validation_data=val_dataset, 
     epochs=50, 
-    callbacks=[early_stopping]    # Pass the callback here
+    callbacks=[early_stopping]
 )
 
-model.save("efficientnet_model.keras")
-print("\nSaved as 'efficientnet_model.keras'")
-
-# --- NEW: Create a 'models' folder if it doesn't exist ---
+# --- Corrected Saving Logic ---
+# Ensure the models folder exists
 os.makedirs('models', exist_ok=True)
 
-# Save the finalized model inside the models folder
-save_path = os.path.join('models', 'efficientnet_model.keras')
+# Save the finalized model using the ultra-stable .h5 format
+save_path = os.path.join('models', 'efficientnet_model.h5')
 model.save(save_path)
-print(f"\nSaved as '{save_path}'")
+print(f"\nSaved successfully as '{save_path}'")
