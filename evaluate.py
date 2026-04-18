@@ -8,7 +8,7 @@ from sklearn.metrics import confusion_matrix
 # Disable annoying TF logs
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
-# # GPU Memory Fix for RTX 3050
+# # GPU Memory Fix for RTX 3050 (Uncomment if needed)
 # gpus = tf.config.experimental.list_physical_devices('GPU')
 # if gpus:
 #     try:
@@ -21,14 +21,14 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 IMG_SIZE = (224, 224)
 BATCH_SIZE = 32
 DATASET_DIR = './dataset'
-OUTPUT_DIR = 'confusion_matrices' # <--- Name of the new folder
+OUTPUT_DIR = 'confusion_matrices'
 
-# Tell the script to look inside the 'models/' folder
+# The list of AI brains we want to test
 MODELS_TO_EVALUATE = [
     ('MobileNetV2', 'models/mobilenet_model.keras'),
-    ('EfficientNetB0', 'models/efficientnet_model.keras'),
     ('ResNet50', 'models/resnet_model.keras'),
-    ('VGG16', 'models/vgg_model.keras')
+    ('VGG16', 'models/vgg_model.keras'),
+    ('InceptionV3', 'logs/output_graph.pb')
 ]
 
 print("\n--- Loading Validation Data ---")
@@ -91,17 +91,58 @@ for model_name, model_file in MODELS_TO_EVALUATE:
 
     print(f"\n--- Evaluating {model_name} ---")
     
-    # 1. Load the trained AI
-    model = tf.keras.models.load_model(model_file)
+    # Branch logic: Handle .pb (Frozen Graph) differently than .keras
+    if model_file.endswith('.pb'):
+        print(f"Loading frozen graph (.pb) for {model_name}...")
+        
+        # Extract images to standard arrays BEFORE entering the TF1 Graph
+        print("Pre-fetching batches to avoid TF1/TF2 iteration conflicts...")
+        numpy_batches = [x.numpy() for x, _ in val_dataset]
+        
+        with tf.io.gfile.GFile(model_file, "rb") as f:
+            graph_def = tf.compat.v1.GraphDef()
+            graph_def.ParseFromString(f.read())
+            
+        with tf.Graph().as_default() as graph:
+            tf.import_graph_def(graph_def, name="")
+            
+            try:
+                # Injecting arrays here
+                input_tensor = graph.get_tensor_by_name('ExpandDims:0')
+                output_tensor = graph.get_tensor_by_name('final_result:0')
+            except KeyError as e:
+                print(f"  -> ERROR: Tensor not found: {e}")
+                continue
+                
+            print(f"Making predictions with {model_name}... (Processing one by one)")
+            predictions_list = []
+            
+            # Run a session to process the dataset
+            with tf.compat.v1.Session(graph=graph) as sess:
+                for batch_images in numpy_batches:
+                    # THE FIX: The .pb graph strictly expects 1 image at a time: shape (1, 224, 224, 3)
+                    # We loop through the batch and feed them individually.
+                    for i in range(batch_images.shape[0]):
+                        # Isolate a single image and add the 'batch of 1' dimension
+                        single_image = np.expand_dims(batch_images[i], axis=0) 
+                        
+                        preds = sess.run(output_tensor, {input_tensor: single_image})
+                        predictions_list.extend(preds)
+                    
+            raw_predictions = np.array(predictions_list)
+
+    else:
+        # Standard TF2 .keras model loading
+        print(f"Loading Keras model for {model_name}...")
+        model = tf.keras.models.load_model(model_file)
+        
+        print(f"Making predictions with {model_name}...")
+        raw_predictions = model.predict(val_dataset)
     
-    # 2. Make it guess every image in the validation set
-    print(f"Making predictions with {model_name}...")
-    raw_predictions = model.predict(val_dataset)
-    
-    # 3. Convert percentages into final guesses (e.g., pick the highest probability)
+    # Convert percentages into final guesses (pick the highest probability)
     predicted_labels = np.argmax(raw_predictions, axis=1)
     
-    # 4. Draw and save the Confusion Matrix
+    # Draw and save the Confusion Matrix
     print(f"Generating chart for {model_name}...")
     plot_confusion_matrix(model_name, true_labels, predicted_labels, class_names)
 

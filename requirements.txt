@@ -13,3 +13,7 @@ matplotlib>=3.7.0
 
 # Utilities
 six>=1.16.0
+
+seaborn 
+
+scikit-learn

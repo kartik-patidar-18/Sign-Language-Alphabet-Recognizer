@@ -101,7 +101,7 @@ ENV/
 .mypy_cache/
 
 # Bottleneck
-my_bottleneck
+bottleneck
 
 # Logs
 logs
@@ -115,4 +115,13 @@ dataset
 # Models
 models
 
+#Labels
 modern_labels.txt
+
+#Confusion matrices
+confusion_matrices
+
+#Comparison
+comparison
+
+

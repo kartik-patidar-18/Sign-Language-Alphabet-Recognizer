@@ -19,16 +19,10 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
 def main():
     parser = argparse.ArgumentParser(description="Run the real-time sign language recognizer.")
-    parser.add_argument('--model', type=str, default='mobilenet', choices=['mobilenet', 'resnet', 'efficientnet', 'vgg'], help='Which AI brain to use')
+    parser.add_argument('--model', type=str, default='mobilenet', choices=['mobilenet', 'resnet', 'vgg'], help='Which AI brain to use')
     args = parser.parse_args()
 
-    # ---------------------------------------------------------
-    # --- UPDATED: Handle .h5 specifically for EfficientNet ---
-    if args.model == 'efficientnet':
-        model_filename = os.path.join("models", f"{args.model}_model.h5")
-    else:
-        model_filename = os.path.join("models", f"{args.model}_model.keras")
-    # ---------------------------------------------------------
+    model_filename = os.path.join("models", f"{args.model}_model.keras")
 
     if not os.path.exists(model_filename):
         print(f"Error: Could not find '{model_filename}'. Train it first!")
@@ -139,14 +133,10 @@ def main():
 if __name__ == '__main__':
     main()
 
-
-
 # To run the recognizer with different models, use the following commands in your terminal:
 
 # MobileNet: python webcam_modern.py --model mobilenet
 
 # ResNet: python webcam_modern.py --model resnet
-
-# EfficientNet: python webcam_modern.py --model efficientnet
 
 # VGG: python webcam_modern.py --model vgg
