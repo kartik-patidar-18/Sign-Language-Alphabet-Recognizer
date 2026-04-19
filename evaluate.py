@@ -53,13 +53,16 @@ true_labels = np.concatenate([y.numpy() for x, y in val_dataset], axis=0)
 
 def plot_confusion_matrix(model_name, y_true, y_pred, classes):
     """Generates and saves a heatmap image of the confusion matrix."""
-    cm = confusion_matrix(y_true, y_pred)
+    
+    # --- THE FIX: Explicitly pass 'labels' to force the matrix to include all classes, 
+    # even if the model never predicted them. ---
+    cm = confusion_matrix(y_true, y_pred, labels=range(len(classes)))
     
     # --- Create the new folder safely ---
     os.makedirs(OUTPUT_DIR, exist_ok=True)
     
-    # Make the plot large enough to read easily
-    plt.figure(figsize=(12, 10))
+    # Make the plot large enough to read easily (increased size slightly for all classes)
+    plt.figure(figsize=(16, 14))
     
     # Draw the heatmap
     sns.heatmap(cm, annot=True, fmt='d', cmap='Blues',
