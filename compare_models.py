@@ -1,5 +1,6 @@
 import os
 import time
+import gc
 import numpy as np
 import tensorflow as tf
 import matplotlib.pyplot as plt
@@ -20,27 +21,30 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 IMG_SIZE = (224, 224)
 BATCH_SIZE = 32
 DATASET_DIR = './dataset'
+OUTPUT_DIR = 'comparison' # Folder to save the final chart
 
-# Keras Models
+# Create the comparison directory right away if it doesn't exist
+os.makedirs(OUTPUT_DIR, exist_ok=True)
+
+# Keras Models (No EfficientNet)
 KERAS_MODELS = {
     'MobileNetV2': 'models/mobilenet_model.keras',
-    'EfficientNetB0': 'models/efficientnet_model.keras',
     'ResNet50': 'models/resnet_model.keras',
     'VGG16': 'models/vgg_model.keras'
 }
 
 # Frozen Graph (.pb) Model Settings
-# IMPORTANT: These names must perfectly match how your .pb file was exported!
 PB_MODEL_NAME = 'InceptionV3'
 PB_MODEL_PATH = 'logs/output_graph.pb'
-PB_INPUT_TENSOR = 'Placeholder:0'    # Common names: 'Placeholder:0', 'input:0', or 'DecodeJpeg/contents:0'
-PB_OUTPUT_TENSOR = 'final_result:0'  # Common names: 'final_result:0', 'InceptionV3/Predictions/Reshape_1:0'
-PB_IMG_SIZE = (299, 299)             # Inception usually expects 299x299
+PB_INPUT_TENSOR = 'ExpandDims:0'     
+PB_OUTPUT_TENSOR = 'final_result:0'  
+PB_IMG_SIZE = (299, 299)             
 
 print("\n--- Loading Validation Data (224x224) ---")
 val_dataset = tf.keras.utils.image_dataset_from_directory(
     DATASET_DIR, validation_split=0.2, subset="validation", 
-    seed=123, image_size=IMG_SIZE, batch_size=BATCH_SIZE
+    seed=123, image_size=IMG_SIZE, batch_size=BATCH_SIZE,
+    shuffle=False # Keep it ordered
 )
 
 names, accuracies, losses, inference_times = [], [], [], []
@@ -62,7 +66,7 @@ for name, model_path in KERAS_MODELS.items():
     dummy_data = np.zeros((1, 224, 224, 3))
     model.predict(dummy_data, verbose=0)
     
-    # Time speed
+    # Time speed 
     start_time = time.time()
     for images, labels in val_dataset.take(10):
         model.predict(images, verbose=0)
@@ -71,6 +75,11 @@ for name, model_path in KERAS_MODELS.items():
     
     print(f"  Accuracy: {accuracy*100:.2f}% | Loss: {loss:.2f} | Speed: {avg_time_ms:.2f} ms")
     names.append(name); accuracies.append(accuracy * 100); losses.append(loss); inference_times.append(avg_time_ms)
+    
+    # FREE MEMORY: Clear the loaded model so it doesn't hoard RAM
+    del model
+    tf.keras.backend.clear_session()
+    gc.collect()
 
 # ==========================================
 # 2. EVALUATE PB MODEL (INCEPTION V3)
@@ -78,78 +87,85 @@ for name, model_path in KERAS_MODELS.items():
 if os.path.exists(PB_MODEL_PATH):
     print(f"\nEvaluating {PB_MODEL_NAME} (.pb Frozen Graph)...")
     
-    # Load the frozen graph
-    with tf.io.gfile.GFile(PB_MODEL_PATH, "rb") as f:
-        graph_def = tf.compat.v1.GraphDef()
-        graph_def.ParseFromString(f.read())
-        
-    with tf.Graph().as_default() as pb_graph:
+    # 1. Load the frozen graph into its own sandbox first
+    pb_graph = tf.Graph()
+    with pb_graph.as_default():
+        with tf.io.gfile.GFile(PB_MODEL_PATH, "rb") as f:
+            graph_def = tf.compat.v1.GraphDef()
+            graph_def.ParseFromString(f.read())
         tf.import_graph_def(graph_def, name="")
         
-    try:
-        with tf.compat.v1.Session(graph=pb_graph) as sess:
+        try:
             input_layer = pb_graph.get_tensor_by_name(PB_INPUT_TENSOR)
             output_layer = pb_graph.get_tensor_by_name(PB_OUTPUT_TENSOR)
+            sess = tf.compat.v1.Session(graph=pb_graph)
             
-            correct_guesses = 0
-            total_images = 0
-            total_loss = 0
-            scce_loss_fn = tf.keras.losses.SparseCategoricalCrossentropy()
-
             # Warmup
             dummy_data = np.zeros((1, 299, 299, 3))
             sess.run(output_layer, feed_dict={input_layer: dummy_data})
+        except KeyError as e:
+            print(f"\n[ERROR] Could not find the tensor name in the .pb file: {e}")
+            sess = None
 
-            start_time = time.time()
-            batches_timed = 0
+    # 2. Iterate dynamically OUTSIDE the graph context.
+    # This prevents the TF1/TF2 clash AND stops the Memory Leak!
+    if sess is not None:
+        correct_guesses = 0
+        total_images = 0
+        total_loss = 0
+        scce_loss_fn = tf.keras.losses.SparseCategoricalCrossentropy()
 
-            # Loop through the dataset manually
-            for images, labels in val_dataset:
-                # Resize images from 224 to 299 for Inception
-                resized_images = tf.image.resize(images, PB_IMG_SIZE).numpy()
-                
-                # Predict
-                predictions = sess.run(output_layer, feed_dict={input_layer: resized_images})
-                
-                # Calculate Accuracy
-                predicted_classes = np.argmax(predictions, axis=1)
-                correct_guesses += np.sum(predicted_classes == labels.numpy())
-                total_images += len(labels)
-                
-                # Calculate Loss
-                batch_loss = scce_loss_fn(labels, predictions).numpy()
-                total_loss += batch_loss * len(labels)
-                
-                batches_timed += 1
+        start_time = time.time()
 
-            end_time = time.time()
+        # Lazy loading: We only grab one batch at a time
+        for batch_images, batch_labels in val_dataset:
+            # Resize just this single batch and convert to numpy
+            resized_images = tf.image.resize(batch_images, PB_IMG_SIZE).numpy()
             
-            pb_accuracy = correct_guesses / total_images
-            pb_loss = total_loss / total_images
-            pb_speed = ((end_time - start_time) / total_images) * 1000
+            batch_predictions = []
+            
+            # Feed images one by one to the PB model
+            for i in range(resized_images.shape[0]):
+                single_image = np.expand_dims(resized_images[i], axis=0) 
+                preds = sess.run(output_layer, feed_dict={input_layer: single_image})
+                batch_predictions.append(preds[0])
+                
+            predictions = np.array(batch_predictions)
+            
+            # Metrics
+            predicted_classes = np.argmax(predictions, axis=1)
+            correct_guesses += np.sum(predicted_classes == batch_labels.numpy())
+            total_images += len(batch_labels)
+            
+            batch_loss = scce_loss_fn(batch_labels, predictions).numpy()
+            total_loss += batch_loss * len(batch_labels)
 
-            print(f"  Accuracy: {pb_accuracy*100:.2f}% | Loss: {pb_loss:.2f} | Speed: {pb_speed:.2f} ms")
-            
-            names.append(PB_MODEL_NAME)
-            accuracies.append(pb_accuracy * 100)
-            losses.append(pb_loss)
-            inference_times.append(pb_speed)
-            
-    except KeyError as e:
-        print(f"\n[ERROR] Could not find the tensor name in the .pb file: {e}")
-        print("You must update PB_INPUT_TENSOR and PB_OUTPUT_TENSOR to match your specific model.")
+        end_time = time.time()
+        sess.close() # Close session to free memory
+        
+        pb_accuracy = correct_guesses / total_images
+        pb_loss = total_loss / total_images
+        pb_speed = ((end_time - start_time) / total_images) * 1000
+
+        print(f"  Accuracy: {pb_accuracy*100:.2f}% | Loss: {pb_loss:.2f} | Speed: {pb_speed:.2f} ms")
+        
+        names.append(PB_MODEL_NAME)
+        accuracies.append(pb_accuracy * 100)
+        losses.append(pb_loss)
+        inference_times.append(pb_speed)
 else:
     print(f"\n[SKIP] {PB_MODEL_NAME} not found at {PB_MODEL_PATH}")
 
 # ==========================================
-# 3. PLOT RESULTS
+# 3. PLOT RESULTS & SAVE TO FOLDER
 # ==========================================
 if len(names) > 0:
     print("\n--- Generating Comparison Charts ---")
+    
     fig, axes = plt.subplots(1, 3, figsize=(18, 6))
 
     colors = ['#4C72B0', '#DD8452', '#55A868', '#C44E52', '#8172B3']
-    colors = colors[:len(names)] # Adjust colors based on how many models actually ran
+    colors = colors[:len(names)]
 
     # Plot 1: Accuracy
     axes[0].bar(names, accuracies, color=colors)
@@ -176,6 +192,8 @@ if len(names) > 0:
     for i, v in enumerate(inference_times): axes[2].text(i, v + 0.5, f"{v:.1f}ms", ha='center', fontweight='bold')
 
     plt.tight_layout()
-    save_path = "model_comparison_chart_all.png"
+    
+    # Save chart inside the new folder
+    save_path = os.path.join(OUTPUT_DIR, "model_comparison_chart_all.png")
     plt.savefig(save_path, dpi=300)
-    print(f"Done! Chart saved as '{save_path}'")
+    print(f"Done! Chart saved successfully as '{save_path}'")
