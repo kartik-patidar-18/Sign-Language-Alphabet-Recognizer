@@ -12,19 +12,19 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 #     except RuntimeError as e:
 #         print(e)
 
-print("\n--- Training ResNet50 (Automated OFAT Testing) ---")
+print("\n--- Training InceptionV3 (Automated OFAT Testing) ---")
 
 ofat_tests = [
-#    {"name": "1_Baseline", "batch_size": 32, "lr": 0.001, "dropout": 0.2, "optimizer": 'adam'},
-#    {"name": "2_BatchUP",  "batch_size": 64, "lr": 0.001, "dropout": 0.2, "optimizer": 'adam'},
-#    {"name": "3_BatchDN",  "batch_size": 16, "lr": 0.001, "dropout": 0.2, "optimizer": 'adam'},
-#    {"name": "4_LR_UP",    "batch_size": 32, "lr": 0.01,  "dropout": 0.2, "optimizer": 'adam'},
+    {"name": "1_Baseline", "batch_size": 32, "lr": 0.001, "dropout": 0.2, "optimizer": 'adam'},
+    {"name": "2_BatchUP",  "batch_size": 64, "lr": 0.001, "dropout": 0.2, "optimizer": 'adam'},
+    {"name": "3_BatchDN",  "batch_size": 16, "lr": 0.001, "dropout": 0.2, "optimizer": 'adam'},
+    {"name": "4_LR_UP",    "batch_size": 32, "lr": 0.01,  "dropout": 0.2, "optimizer": 'adam'},
     {"name": "5_LR_DN",    "batch_size": 32, "lr": 0.0001,"dropout": 0.2, "optimizer": 'adam'},
     {"name": "6_DropoutUP","batch_size": 32, "lr": 0.001, "dropout": 0.5, "optimizer": 'adam'},
     {"name": "7_Optimizer","batch_size": 32, "lr": 0.001, "dropout": 0.2, "optimizer": 'sgd'}
 ]
 
-IMG_SIZE = (224, 224)
+IMG_SIZE = (224, 224) # Native is 299, but 224 works with include_top=False
 DATASET_DIR = './dataset'
 os.makedirs('models', exist_ok=True)
 
@@ -46,7 +46,7 @@ for test in ofat_tests:
         with open('modern_labels.txt', 'w') as f:
             f.write('\n'.join(class_names))
 
-    base_model = applications.ResNet50(input_shape=(224, 224, 3), include_top=False, weights='imagenet')
+    base_model = applications.InceptionV3(input_shape=(224, 224, 3), include_top=False, weights='imagenet')
     base_model.trainable = False 
 
     model = models.Sequential([
@@ -73,6 +73,6 @@ for test in ofat_tests:
         callbacks=[early_stopping]
         )
 
-    save_path = os.path.join('models', f"resnet_b{test['batch_size']}_lr{test['lr']}_do{test['dropout']}_{test['optimizer']}.keras")
+    save_path = os.path.join('models', f"inception_b{test['batch_size']}_lr{test['lr']}_do{test['dropout']}_{test['optimizer']}.keras")
     model.save(save_path)
     print(f"\nSaved as '{save_path}'")
