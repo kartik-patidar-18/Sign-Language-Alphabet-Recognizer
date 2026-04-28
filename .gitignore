@@ -118,11 +118,5 @@ models
 #Labels
 modern_labels.txt
 
-#Confusion matrices
-confusion_matrices
-
-#Comparison
-comparison
-
 model_evaluations
 
