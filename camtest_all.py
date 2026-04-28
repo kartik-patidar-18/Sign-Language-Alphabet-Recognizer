@@ -37,9 +37,7 @@ def main():
 
     print(f"\nLoading {args.model}... Booting up the pure TF graph.")
     
-    # ---------------------------------------------------------
     # NEW LOAD LOGIC: Universal SavedModel Format
-    # ---------------------------------------------------------
     model = tf.saved_model.load(model_folder)
     infer = model.signatures["serving_default"]
 
@@ -86,9 +84,7 @@ def main():
             img_rgb = cv2.cvtColor(img_resized, cv2.COLOR_BGR2RGB)
             img_array = np.expand_dims(img_rgb, axis=0) # Keep as numpy first
             
-            # ---------------------------------------------------------
             # NEW PREDICTION LOGIC: Raw Execution Graph
-            # ---------------------------------------------------------
             # 1. Convert image to raw float32 tensor
             img_tensor = tf.constant(img_array, dtype=tf.float32)
             
@@ -153,3 +149,8 @@ def main():
 
 if __name__ == '__main__':
     main()
+
+
+
+
+# To Run this python camtest_all.py --model inception_b64_lr0.001_do0.2_adam

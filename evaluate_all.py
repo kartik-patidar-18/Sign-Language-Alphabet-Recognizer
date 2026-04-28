@@ -12,9 +12,7 @@ from sklearn.metrics import (confusion_matrix, accuracy_score,
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' 
 os.environ['TF_FORCE_GPU_ALLOW_GROWTH'] = 'true'
 
-# ==========================================
 # RTX 3050 GPU Memory Management
-# ==========================================
 gpus = tf.config.experimental.list_physical_devices('GPU')
 if gpus:
     try:
@@ -29,9 +27,7 @@ print("\n--- Running Full Model Evaluation (Full 29x29 Matrix Version) ---")
 IMG_SIZE = (224, 224)
 BATCH_SIZE = 32
 
-# ==========================================
 # PATH CONFIGURATION
-# ==========================================
 DATASET_DIR = 'dataset'
 MODELS_DIR = 'models' 
 OUTPUT_DIR = 'Model_Evaluations'
