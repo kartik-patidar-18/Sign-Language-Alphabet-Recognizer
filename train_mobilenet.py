@@ -39,7 +39,7 @@ for test in ofat_tests:
     # Clear previous model from memory to prevent GPU OOM errors
     tf.keras.backend.clear_session()
 
-    # Load Dataset (Must be inside loop because batch_size changes)
+    # Load Dataset
     train_dataset = tf.keras.utils.image_dataset_from_directory(
         DATASET_DIR, validation_split=0.2, subset="training", seed=123, image_size=IMG_SIZE, batch_size=test['batch_size'])
     val_dataset = tf.keras.utils.image_dataset_from_directory(
