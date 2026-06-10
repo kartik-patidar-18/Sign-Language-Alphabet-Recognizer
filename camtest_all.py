@@ -153,4 +153,7 @@ if __name__ == '__main__':
 
 
 
-# To Run this python camtest_all.py --model inception_b64_lr0.001_do0.2_adam
+# To Run this python camtest_all.py --model inception_b32_lr0.001_do0.2_adam
+# To Run this python camtest_all.py --model mobilenet_b32_lr0.001_do0.2_adam
+# To Run this python camtest_all.py --model resnet_b32_lr0.001_do0.2_adam
+# To Run this python camtest_all.py --model vgg_b32_lr0.001_do0.2_adam

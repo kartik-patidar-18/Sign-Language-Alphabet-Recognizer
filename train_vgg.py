@@ -15,12 +15,12 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 print("\n--- Training VGG16 (Automated OFAT Testing) ---")
 
 ofat_tests = [
-#    {"name": "1_Baseline", "batch_size": 32, "lr": 0.001, "dropout": 0.2, "optimizer": 'adam'},
-#    {"name": "2_BatchUP",  "batch_size": 64, "lr": 0.001, "dropout": 0.2, "optimizer": 'adam'},
-#    {"name": "3_BatchDN",  "batch_size": 16, "lr": 0.001, "dropout": 0.2, "optimizer": 'adam'},
-#    {"name": "4_LR_UP",    "batch_size": 32, "lr": 0.01,  "dropout": 0.2, "optimizer": 'adam'},
+    {"name": "1_Baseline", "batch_size": 32, "lr": 0.001, "dropout": 0.2, "optimizer": 'adam'},
+    {"name": "2_BatchUP",  "batch_size": 64, "lr": 0.001, "dropout": 0.2, "optimizer": 'adam'},
+    {"name": "3_BatchDN",  "batch_size": 16, "lr": 0.001, "dropout": 0.2, "optimizer": 'adam'},
+    {"name": "4_LR_UP",    "batch_size": 32, "lr": 0.01,  "dropout": 0.2, "optimizer": 'adam'},
     {"name": "5_LR_DN",    "batch_size": 32, "lr": 0.0001,"dropout": 0.2, "optimizer": 'adam'},
-#    {"name": "6_DropoutUP","batch_size": 32, "lr": 0.001, "dropout": 0.5, "optimizer": 'adam'},
+    {"name": "6_DropoutUP","batch_size": 32, "lr": 0.001, "dropout": 0.5, "optimizer": 'adam'},
     {"name": "7_Optimizer","batch_size": 32, "lr": 0.001, "dropout": 0.2, "optimizer": 'sgd'}
 ]
 

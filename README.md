@@ -1,4 +1,3 @@
-https://www.kaggle.com/datasets/grassknoted/asl-alphabet?select=asl_alphabet_train
 Sign Language Alphabet Recognizer
 A machine learning project designed to train, evaluate, and deploy a model for recognizing sign language alphabets in real-time.
 
